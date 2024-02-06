@@ -1,0 +1,376 @@
+# bitbucket-pipelines.yml
+#image: hashicorp/terraform:full
+pipelines:
+  custom: 
+    vpc:
+      - step:
+          name: Create VPC
+          script:
+          - apt-get update && apt-get install -y unzip
+          - wget "https://releases.hashicorp.com/terraform/1.5.1/terraform_1.5.1_linux_amd64.zip"
+          - unzip terraform_1.5.1_linux_amd64.zip
+          - mv terraform /usr/local/bin/
+          - cd modules/vpc
+          - terraform init
+          - terraform plan
+          - terraform apply -auto-approve
+          - export vpcId="$(terraform output vpc_id)"
+          - echo "vpc id = $vpcId"
+          - cd ..
+          - cd ..
+          - echo "export vpcId=$vpcId" >> set_env.sh
+          #- ls -lrt
+          artifacts:
+          - set_env.sh
+      - step:
+          name: JIRA Comment
+          script:
+          - cat set_env.sh
+          - source set_env.sh
+          - echo "vpc ID= $vpcId"  
+          - apt-get update
+          - apt-get install -y curl jq
+          - >
+             export PR_ID=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests?state=MERGED" | jq -r '.values[0].id')
+          - >  
+            echo "Latest PR Merge ID: $PR_ID"
+          - >
+            export PR_TITLE=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests/${PR_ID}" | jq -r '.title')
+          - >
+            echo "Title: $PR_TITLE"
+          - >
+            curl --location --request POST --header "Accept: application/json" --header "Content-Type: application/json" --header "Authorization: Basic ${JIRA_TOKEN}" "https://kiran8755.atlassian.net/rest/api/3/issue/${PR_TITLE}/comment" --data '{"body": {"content": [{"content": [{"text": "VPC with id '${vpcId}' is created.","type": "text"}],"type": "paragraph"}],"type": "doc","version": 1}}'
+        
+    subnet:
+      - step:
+          name: Create Subnet
+          script:
+          - apt-get update && apt-get install -y unzip
+          - wget "https://releases.hashicorp.com/terraform/1.5.1/terraform_1.5.1_linux_amd64.zip"
+          - unzip terraform_1.5.1_linux_amd64.zip
+          - mv terraform /usr/local/bin/
+          - cd modules/subnet
+          - terraform init
+          - terraform plan
+          - terraform apply -auto-approve
+          - export subnetID1="$(terraform output public-subnet-tf-1)"
+          - export subnetID2="$(terraform output public-subnet-tf-2)"
+          - echo "subnet ID 1 = $subnetID1"
+          - echo "subnet ID 2 = $subnetID2"
+          - cd ..
+          - cd ..
+          - echo "export subnetID1=$subnetID1 export subnetID2=$subnetID2" >> set_env.sh
+          - cat set_env.sh
+          #- ls -lrt
+          artifacts:
+          - set_env.sh
+
+          
+      - step:
+          name: JIRA Comment
+          script:
+          - cat set_env.sh
+          - source set_env.sh
+          - echo "subnet ID 1 = $subnetID1"
+          - echo "subnet ID 2 = $subnetID2"
+          - cat /etc/os-release  
+          - apt-get update
+          - apt-get install -y curl jq
+          - >
+             export PR_ID=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests?state=MERGED" | jq -r '.values[0].id')
+          - >  
+            echo "Latest PR Merge ID: $PR_ID"
+          - >
+            export PR_TITLE=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests/${PR_ID}" | jq -r '.title')
+          - >
+            echo "Title: $PR_TITLE"
+          - >
+            curl --location --request POST --header "Accept: application/json" --header "Content-Type: application/json" --header "Authorization: Basic ${JIRA_TOKEN}" "https://kiran8755.atlassian.net/rest/api/3/issue/${PR_TITLE}/comment" --data '{"body": {"content": [{"content": [{"text": "subnets with id '${subnetID1}' '${subnetID2}' is created." ,"type": "text"}],"type": "paragraph"}],"type": "doc","version": 1}}'
+            
+    ec2:
+      - step:
+          name: Create EC2 
+          script:
+          - apt-get update && apt-get install -y unzip
+          - wget "https://releases.hashicorp.com/terraform/1.5.1/terraform_1.5.1_linux_amd64.zip"
+          - unzip terraform_1.5.1_linux_amd64.zip
+          - mv terraform /usr/local/bin/
+          - cd modules/ec2
+          - terraform init
+          - terraform plan
+          - terraform apply -auto-approve
+          - export instanceID1="$(terraform output instance_id_1)"
+          - export instanceID2="$(terraform output instance_id_2)"
+          - echo "Instance ID 1 = $instanceID1"
+          - echo "Instance ID 2 = $instanceID2"
+          - cd ..
+          - cd ..
+          - echo "export instanceID1=$instanceID1 expoert instanceID2=$instanceID2" >> set_env.sh
+          #- ls -lrt
+          artifacts:
+          - set_env.sh
+
+          
+      - step:
+          name: JIRA Comment
+          script:
+          - cat set_env.sh
+          - source set_env.sh
+          - echo "Instance ID 1 = $instanceID1"
+          - echo "Instance ID 2 = $instanceID2"  
+          - cat /etc/os-release  
+          - apt-get update
+          - apt-get install -y curl jq
+          - >
+             export PR_ID=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests?state=MERGED" | jq -r '.values[0].id')
+          - >  
+            echo "Latest PR Merge ID: $PR_ID"
+          - >
+            export PR_TITLE=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests/${PR_ID}" | jq -r '.title')
+          - >
+            echo "Title: $PR_TITLE"
+          - >
+            curl --location --request POST --header "Accept: application/json" --header "Content-Type: application/json" --header "Authorization: Basic ${JIRA_TOKEN}" "https://kiran8755.atlassian.net/rest/api/3/issue/${PR_TITLE}/comment" --data '{"body": {"content": [{"content": [{"text": "instances with id '${instanceID1}' , '${instanceID2}' is created.","type": "text"}],"type": "paragraph"}],"type": "doc","version": 1}}'    
+          
+    s3:
+      - step:
+          name: Create S3 Bucket
+          script:
+          - apt-get update && apt-get install -y unzip
+          - wget "https://releases.hashicorp.com/terraform/1.5.1/terraform_1.5.1_linux_amd64.zip"
+          - unzip terraform_1.5.1_linux_amd64.zip
+          - mv terraform /usr/local/bin/
+          - cd modules/s3
+          - terraform init
+          - terraform plan
+          - terraform apply -auto-approve
+          - export bucketId="$(terraform output bucket_id)"
+          - echo "S3 Bucket Id = $bucketId"
+          - cd ..
+          - cd ..
+          - echo "export bucketId=$bucketId" >> set_env.sh
+          #- ls -lrt
+          artifacts:
+          - set_env.sh
+      
+      - step:
+          name: JIRA Comment
+          script:
+          - cat set_env.sh
+          - source set_env.sh
+          - echo "S3 Bucket ID= $bucketId"
+          - cat /etc/os-release  
+          - apt-get update
+          - apt-get install -y curl jq
+          - >
+             export PR_ID=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests?state=MERGED" | jq -r '.values[0].id')
+          - >  
+            echo "Latest PR Merge ID: $PR_ID"
+          - >
+            export PR_TITLE=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests/${PR_ID}" | jq -r '.title')
+          - >
+            echo "Title: $PR_TITLE"
+          - > 
+            curl --location --request POST --header "Accept: application/json" --header "Content-Type: application/json" --header "Authorization: Basic ${JIRA_TOKEN}" "https://kiran8755.atlassian.net/rest/api/3/issue/${PR_TITLE}/comment" --data '{"body": {"content": [{"content": [{"text": "S3 Bucket with Id '${bucketId}' is created.","type": "text"}],"type": "paragraph"}],"type": "doc","version": 1}}'
+
+    sns:
+      - step:
+          name: Create SNS
+          script:
+          - apt-get update && apt-get install -y unzip
+          - wget "https://releases.hashicorp.com/terraform/1.5.1/terraform_1.5.1_linux_amd64.zip"
+          - unzip terraform_1.5.1_linux_amd64.zip
+          - mv terraform /usr/local/bin/
+          - apt-get install -y curl
+          - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          - unzip awscliv2.zip
+          - sudo ./aws/install
+          - cd modules/sns
+          - terraform init
+          - terraform plan
+          - terraform apply -auto-approve
+          - export snsarn="$(terraform output sns_arn)"
+          - echo "sns = $snsarn"
+          - cd ..
+          - cd ..
+          - echo "export snsarn=$snsarn" >> set_env.sh
+          #- ls -lrt
+          artifacts:
+          - set_env.sh
+
+          
+      - step:
+          name: JIRA Comment
+          script:
+          - cat set_env.sh
+          - source set_env.sh
+          - echo "sns arn= $sns arn"  
+          - cat /etc/os-release  
+          - apt-get update
+          - apt-get install -y curl jq
+          - >
+             export PR_ID=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests?state=MERGED" | jq -r '.values[0].id')
+          - >  
+            echo "Latest PR Merge ID: $PR_ID"
+          - >
+            export PR_TITLE=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests/${PR_ID}" | jq -r '.title')
+          - >
+            echo "Title: $PR_TITLE"
+          - >
+            curl --location --request POST --header "Accept: application/json" --header "Content-Type: application/json" --header "Authorization: Basic ${JIRA_TOKEN}" "https://kiran8755.atlassian.net/rest/api/3/issue/${PR_TITLE}/comment" --data '{"body": {"content": [{"content": [{"text": "snsarn with arn value = '${snsarn}' is created.","type": "text"}],"type": "paragraph"}],"type": "doc","version": 1}}'
+            
+
+    cloudwatch:
+      - step:
+          name: Create Cloudwatch
+          script:
+          - apt-get update && apt-get install -y unzip
+          - wget "https://releases.hashicorp.com/terraform/1.5.1/terraform_1.5.1_linux_amd64.zip"
+          - unzip terraform_1.5.1_linux_amd64.zip
+          - mv terraform /usr/local/bin/
+          - cd modules/cloudwatch
+          - terraform init
+          - terraform plan
+          - terraform apply -auto-approve
+
+      - step:
+          name: JIRA Comment
+          script:
+          - cat /etc/os-release  
+          - apt-get update
+          - apt-get install -y curl jq
+          - >
+             export PR_ID=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests?state=MERGED" | jq -r '.values[0].id')
+          - >  
+            echo "Latest PR Merge ID: $PR_ID"
+          - >
+            export PR_TITLE=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests/${PR_ID}" | jq -r '.title')
+          - >
+            echo "Title: $PR_TITLE"
+          - >
+            curl --location --request POST --header "Accept: application/json" --header "Content-Type: application/json" --header "Authorization: Basic ${JIRA_TOKEN}" "https://kiran8755.atlassian.net/rest/api/3/issue/${PR_TITLE}/comment" --data '{"body": {"content": [{"content": [{"text": "Cloudwatch created.","type": "text"}],"type": "paragraph"}],"type": "doc","version": 1}}'
+
+      
+    alb:
+      - step:
+          name: Create ALB
+          script:
+          - apt-get update && apt-get install -y unzip
+          - wget "https://releases.hashicorp.com/terraform/1.5.1/terraform_1.5.1_linux_amd64.zip"
+          - unzip terraform_1.5.1_linux_amd64.zip
+          - mv terraform /usr/local/bin/
+          - cd modules/alb
+          - terraform init
+          - terraform plan
+          - terraform apply -auto-approve
+          - export albarn="$(terraform output alb_target_group_arn)"
+          - echo "alb target group arn = $albarn"
+          - cd ..
+          - cd ..
+          - echo "export albarn=$albarn" >> set_env.sh
+          #- ls -lrt
+          artifacts:
+          - set_env.sh
+
+      - step:
+          name: JIRA Comment
+          script:
+          - cat set_env.sh
+          - source set_env.sh
+          - echo "alb target group arn = $albarn"  
+          - cat /etc/os-release  
+          - apt-get update
+          - apt-get install -y curl jq
+          - >
+             export PR_ID=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests?state=MERGED" | jq -r '.values[0].id')
+          - >  
+            echo "Latest PR Merge ID: $PR_ID"
+          - >
+            export PR_TITLE=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests/${PR_ID}" | jq -r '.title')
+          - >
+            echo "Title: $PR_TITLE"
+          - >
+            curl --location --request POST --header "Accept: application/json" --header "Content-Type: application/json" --header "Authorization: Basic ${JIRA_TOKEN}" "https://kiran8755.atlassian.net/rest/api/3/issue/${PR_TITLE}/comment" --data '{"body": {"content": [{"content": [{"text": "Application Load balancer is created and target group arn value = '${albarn}' is created.","type": "text"}],"type": "paragraph"}],"type": "doc","version": 1}}'    
+          
+      
+    auto_scaling:
+      - step:
+          name: Create Autoscaling Group
+          script:
+          - apt-get update && apt-get install -y unzip
+          - wget "https://releases.hashicorp.com/terraform/1.5.1/terraform_1.5.1_linux_amd64.zip"
+          - unzip terraform_1.5.1_linux_amd64.zip
+          - mv terraform /usr/local/bin/
+          - apt-get install -y curl
+          - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          - unzip awscliv2.zip
+          - sudo ./aws/install          
+          - cd modules/auto_scaling
+          - terraform init
+          - terraform plan
+          - terraform apply -auto-approve
+          - export asgID="$(terraform output asg)"
+          - echo "asg ID = $asgID"
+          - cd ..
+          - cd ..
+          - echo "export asgID=$asgID" >> set_env.sh
+          #- ls -lrt
+          artifacts:
+          - set_env.sh
+
+          
+      - step:
+          name: JIRA Comment
+          script:
+          - cat set_env.sh
+          - source set_env.sh
+          - echo "asg ID= $asgID"  
+          - cat /etc/os-release  
+          - apt-get update
+          - apt-get install -y curl jq
+          - >
+             export PR_ID=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests?state=MERGED" | jq -r '.values[0].id')
+          - >  
+            echo "Latest PR Merge ID: $PR_ID"
+          - >
+            export PR_TITLE=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests/${PR_ID}" | jq -r '.title')
+          - >
+            echo "Title: $PR_TITLE"
+          - >
+            curl --location --request POST --header "Accept: application/json" --header "Content-Type: application/json" --header "Authorization: Basic ${JIRA_TOKEN}" "https://kiran8755.atlassian.net/rest/api/3/issue/${PR_TITLE}/comment" --data '{"body": {"content": [{"content": [{"text": "auto scaling with id '${asgID}' is created.","type": "text"}],"type": "paragraph"}],"type": "doc","version": 1}}'
+          
+          
+    default:
+      - step:
+          name: Create Infrastructure
+          script:
+           - apt-get update && apt-get install -y unzip
+           - wget "https://releases.hashicorp.com/terraform/1.5.1/terraform_1.5.1_linux_amd64.zip"
+           - unzip terraform_1.5.1_linux_amd64.zip
+           - mv terraform /usr/local/bin/
+           - apt-get install -y curl
+           - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+           - unzip awscliv2.zip
+           - sudo ./aws/install
+           - terraform init
+           - terraform plan
+           - terraform apply -auto-approve
+           
+           
+      - step:
+          name: JIRA Comment
+          script:
+          - cat /etc/os-release  
+          - apt-get update
+          - apt-get install -y curl jq
+          - >
+             export PR_ID=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests?state=MERGED" | jq -r '.values[0].id')
+          - >  
+            echo "Latest PR Merge ID: $PR_ID"
+          - >
+            export PR_TITLE=$(curl --location -g --request GET --header "Authorization: Bearer ${BITBUCKET_TOKEN}" "https://api.bitbucket.org/2.0/repositories/shubhamrbavane/{e5ea1abc-1249-40fa-b679-05932af07f3b}/pullrequests/${PR_ID}" | jq -r '.title')
+          - >
+            echo "Title: $PR_TITLE"
+          - >
+            curl --location --request POST --header "Accept: application/json" --header "Content-Type: application/json" --header "Authorization: Basic ${JIRA_TOKEN}" "https://kiran8755.atlassian.net/rest/api/3/issue/${PR_TITLE}/comment" --data '{"body": {"content": [{"content": [{"text": "All Resources created.","type": "text"}],"type": "paragraph"}],"type": "doc","version": 1}}'
+          
